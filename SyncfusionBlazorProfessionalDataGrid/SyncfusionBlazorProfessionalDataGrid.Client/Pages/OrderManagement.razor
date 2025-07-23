@@ -1,0 +1,483 @@
+﻿@page "/order-management"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Sipariş Yönetimi - Profesyonel DataGrid</PageTitle>
+
+<div class="container-fluid py-3">
+    <h2 class="mb-4">Sipariş Yönetim Sistemi</h2>
+
+    <SfToast @ref="ToastObj" ShowCloseButton="true" Timeout="3000">
+        <ToastPosition X="Right" Y="Top"></ToastPosition>
+    </SfToast>
+
+    <SfGrid @ref="Grid"
+            DataSource="@Orders"
+            AllowPaging="true"
+            AllowSorting="true"
+            AllowFiltering="true"
+            AllowGrouping="true"
+            AllowTextWrap="true"
+            AllowReordering="true"
+            AllowResizing="true"
+            AllowMultiSorting="true"
+            AllowExcelExport="true"
+            AllowPdfExport="true"
+            AllowSelection="true"
+            ShowColumnChooser="true"
+            ShowColumnMenu="true"
+            EnableVirtualization="true"
+            EnablePersistence="true"
+            Height="600"
+            RowHeight="38"
+            GridLines="GridLine.Both"
+            Toolbar="@ToolbarItems"
+            ContextMenuItems="@ContextMenuItems">
+
+        <GridEditSettings AllowAdding="true"
+                          AllowEditing="true"
+                          AllowDeleting="true"
+                          Mode="EditMode.Dialog"
+                          ShowDeleteConfirmDialog="true"
+                          ShowConfirmDialog="false">
+        </GridEditSettings>
+
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"
+                            EnableCaseSensitivity="false"
+                            ShowFilterBarOperator="true"
+                            ImmediateModeDelay="1000">
+        </GridFilterSettings>
+
+        <GridSortSettings>
+            <GridSortColumns>
+                <GridSortColumn Field="OrderDate" Direction="SortDirection.Descending"></GridSortColumn>
+            </GridSortColumns>
+        </GridSortSettings>
+
+        <GridGroupSettings ShowDropArea="true" ShowGroupedColumn="true" ShowUngroupButton="true">
+            <CaptionTemplate>
+                @{
+                    var order = (context as CaptionTemplateContext);
+                    <div class="d-flex align-items-center">
+                        <span class="fw-bold">@order.Field:</span>
+                        <span class="ms-2">@order.Key</span>
+                        <span class="ms-auto badge bg-primary">@order.Count Kayıt</span>
+                    </div>
+                }
+            </CaptionTemplate>
+        </GridGroupSettings>
+
+        <GridPageSettings PageSize="15" PageSizes="@(new int[] { 5, 10, 15, 20, 50, 100 })"></GridPageSettings>
+
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Multiple"
+                               Mode="Syncfusion.Blazor.Grids.SelectionMode.Row">
+        </GridSelectionSettings>
+
+        <GridSearchSettings Fields="@(new string[] { "OrderID", "ShipName", "ShipCity", "ShipCountry" })"
+                            IgnoreCase="true"
+                            IgnoreAccent="true">
+        </GridSearchSettings>
+
+        <GridEvents TValue="Order"
+                    OnActionBegin="OnActionBegin"
+                    OnActionComplete="OnActionComplete"
+                    OnActionFailure="OnActionFailure"
+                    RowSelected="OnRowSelected"
+                    Created="OnCreated"
+                    ExcelExportComplete="ExcelExportComplete"
+                    PdfExportComplete="PdfExportComplete">
+        </GridEvents>
+
+        <GridAggregates>
+            <GridAggregate>
+                <GridAggregateColumns>
+                    <GridAggregateColumn Field="@nameof(Order.TotalAmount)" Type="AggregateType.Sum" Format="C2">
+                        <FooterTemplate>
+                            @{
+                                var aggregate = (context as AggregateTemplateContext);
+                                <div>
+                                    <span class="fw-bold">Toplam:</span> @($"{aggregate?.Sum:C2}")
+                                </div>
+                            }
+                        </FooterTemplate>
+                    </GridAggregateColumn>
+                    <GridAggregateColumn Field="@nameof(Order.OrderID)" Type="AggregateType.Count">
+                        <FooterTemplate>
+                            @{
+                                var aggregate = (context as AggregateTemplateContext);
+                                <div>
+                                    <span class="fw-bold">Kayıt Sayısı:</span> @aggregate?.Count
+                                </div>
+                            }
+                        </FooterTemplate>
+                    </GridAggregateColumn>
+                </GridAggregateColumns>
+            </GridAggregate>
+        </GridAggregates>
+
+        <GridColumns>
+            <GridColumn Type="ColumnType.CheckBox" Width="50"></GridColumn>
+
+            <GridColumn Field="@nameof(Order.OrderID)"
+                        HeaderText="Sipariş No"
+                        IsPrimaryKey="true"
+                        Width="120"
+                        TextAlign="TextAlign.Center"
+                        AllowEditing="false">
+                <Template>
+                    @{
+                        var order = (context as Order);
+                        <span class="badge bg-secondary">#@order?.OrderID</span>
+                    }
+                </Template>
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.CustomerID)"
+                        HeaderText="Müşteri"
+                        ForeignKeyField="CustomerID"
+                        ForeignKeyValue="CompanyName"
+                        DataSource="@Customers"
+                        Width="200">
+                <EditTemplate>
+                    @{
+                        var order = (context as Order);
+                        <SfDropDownList TValue="int"
+                                        TItem="Customer"
+                                        DataSource="@Customers"
+                                        @bind-Value="@order.CustomerID"
+                                        Placeholder="Müşteri Seçin">
+                            <DropDownListFieldSettings Value="CustomerID" Text="CompanyName"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    }
+                </EditTemplate>
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.EmployeeID)"
+                        HeaderText="Satış Temsilcisi"
+                        ForeignKeyField="EmployeeID"
+                        ForeignKeyValue="FullName"
+                        DataSource="@Employees"
+                        Width="180">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.OrderDate)"
+                        HeaderText="Sipariş Tarihi"
+                        Format="dd.MM.yyyy"
+                        Type="ColumnType.Date"
+                        Width="140"
+                        TextAlign="TextAlign.Center">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.ShippedDate)"
+                        HeaderText="Gönderim Tarihi"
+                        Format="dd.MM.yyyy"
+                        Type="ColumnType.Date"
+                        Width="140"
+                        TextAlign="TextAlign.Center"
+                        AllowFiltering="false">
+                <Template>
+                    @{
+                        var order = (context as Order);
+                        if (order?.ShippedDate.HasValue == true)
+                        {
+                            <span>@order.ShippedDate.Value.ToString("dd.MM.yyyy")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Henüz gönderilmedi</span>
+                        }
+                    }
+                </Template>
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.OrderStatus)"
+                        HeaderText="Durum"
+                        Width="140"
+                        TextAlign="TextAlign.Center">
+                <Template>
+                    @{
+                        var order = (context as Order);
+                        var badgeClass = order?.OrderStatus switch
+                        {
+                            "Beklemede" => "bg-warning",
+                            "Onaylandı" => "bg-info",
+                            "Hazırlanıyor" => "bg-primary",
+                            "Kargoda" => "bg-secondary",
+                            "Teslim Edildi" => "bg-success",
+                            "İptal Edildi" => "bg-danger",
+                            "İade" => "bg-dark",
+                            _ => "bg-light"
+                        };
+                        <span class="badge @badgeClass">@order?.OrderStatus</span>
+                    }
+                </Template>
+                <EditTemplate>
+                    @{
+                        var order = (context as Order);
+                        <SfDropDownList TValue="string"
+                                        TItem="OrderStatus"
+                                        DataSource="@OrderStatuses"
+                                        @bind-Value="@order.OrderStatus">
+                            <DropDownListFieldSettings Value="Status" Text="StatusText"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    }
+                </EditTemplate>
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.TotalAmount)"
+                        HeaderText="Toplam Tutar"
+                        Format="C2"
+                        Type="ColumnType.Number"
+                        Width="150"
+                        TextAlign="TextAlign.Right">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.ProductCount)"
+                        HeaderText="Ürün Sayısı"
+                        Width="120"
+                        TextAlign="TextAlign.Center">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.ShipCity)"
+                        HeaderText="Şehir"
+                        Width="150">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.ShipCountry)"
+                        HeaderText="Ülke"
+                        Width="150">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.PaymentMethod)"
+                        HeaderText="Ödeme Yöntemi"
+                        Width="150">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.IsActive)"
+                        HeaderText="Aktif"
+                        Width="100"
+                        Type="ColumnType.Boolean"
+                        DisplayAsCheckBox="true"
+                        TextAlign="TextAlign.Center">
+            </GridColumn>
+
+            <GridColumn Field="@nameof(Order.Notes)"
+                        HeaderText="Notlar"
+                        Width="200"
+                        AllowSorting="false"
+                        Visible="false">
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<style>
+    .e-grid .e-toolbar {
+        background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .e-grid .e-toolbar .e-toolbar-item .e-tbar-btn {
+        color: white;
+    }
+
+    .e-grid .e-groupdroparea {
+        background-color: #f8f9fa;
+        border: 2px dashed #dee2e6;
+    }
+
+    .e-grid .e-gridheader {
+        background-color: #f8f9fa;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #f8f9fa;
+    }
+</style>
+
+@code {
+    [Inject]
+    public DataService DataService { get; set; }
+    private SfGrid<Order>? Grid;
+    private SfToast? ToastObj;
+
+    private List<Order> Orders = new();
+    private List<Customer> Customers = new();
+    private List<Employee> Employees = new();
+    private List<OrderStatus> OrderStatuses = new();
+
+    private List<object> ToolbarItems = new List<object>
+    {
+        new ItemModel { Text = "Ekle", TooltipText = "Yeni Sipariş Ekle", PrefixIcon = "e-add", Id = "Grid_add" },
+        new ItemModel { Text = "Düzenle", TooltipText = "Siparişi Düzenle", PrefixIcon = "e-edit", Id = "Grid_edit" },
+        new ItemModel { Text = "Sil", TooltipText = "Siparişi Sil", PrefixIcon = "e-delete", Id = "Grid_delete" },
+        new ItemModel { Text = "Güncelle", TooltipText = "Değişiklikleri Kaydet", PrefixIcon = "e-update", Id = "Grid_update" },
+        new ItemModel { Text = "İptal", TooltipText = "İptal", PrefixIcon = "e-cancel", Id = "Grid_cancel" },
+        "Separator",
+        new ItemModel { Text = "Ara", TooltipText = "Kayıtlarda Ara", PrefixIcon = "e-search", Align = ItemAlign.Right },
+        new ItemModel { Text = "Excel", TooltipText = "Excel'e Aktar", PrefixIcon = "e-excel-export", Id = "Grid_excelexport", Align = ItemAlign.Right },
+        new ItemModel { Text = "PDF", TooltipText = "PDF'e Aktar", PrefixIcon = "e-pdf-export", Id = "Grid_pdfexport", Align = ItemAlign.Right },
+        new ItemModel { Text = "CSV", TooltipText = "CSV'ye Aktar", PrefixIcon = "e-csv-export", Id = "Grid_csvexport", Align = ItemAlign.Right },
+        new ItemModel { Text = "Yazdır", TooltipText = "Yazdır", PrefixIcon = "e-print", Id = "Grid_print", Align = ItemAlign.Right },
+        new ItemModel { Text = "Sütunlar", TooltipText = "Sütun Seçici", Id = "Grid_columnchooser", Align = ItemAlign.Right }
+    };
+
+    private List<object> ContextMenuItems = new List<object>
+    {
+        "AutoFit",
+        "AutoFitAll",
+        "SortAscending",
+        "SortDescending",
+        "Copy",
+        "Edit",
+        "Delete",
+        "Save",
+        "Cancel",
+        "PdfExport",
+        "ExcelExport",
+        "CsvExport",
+        "FirstPage",
+        "PrevPage",
+        "LastPage",
+        "NextPage"
+    };
+
+    protected override void OnInitialized()
+    {
+        // Verileri yükle
+        Customers = DataService.GetCustomers();
+        Employees = DataService.GetEmployees();
+        Orders = DataService.GetOrders();
+        OrderStatuses = DataService.GetOrderStatuses();
+    }
+
+    private async Task OnCreated()
+    {
+        // Grid oluşturulduktan sonra yapılacak işlemler
+        await ShowToast("DataGrid başarıyla yüklendi!", "Bilgi", "Information");
+    }
+
+    private void OnRowSelected(RowSelectEventArgs<Order> args)
+    {
+        // Satır seçildiğinde
+        Console.WriteLine($"Sipariş #{args.Data.OrderID} seçildi.");
+    }
+
+    private async Task OnActionBegin(ActionEventArgs<Order> args)
+    {
+        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
+        {
+            // Kaydetmeden önce validasyon
+            if (args.Data.OrderDate > DateTime.Now)
+            {
+                args.Cancel = true;
+                await ShowToast("Sipariş tarihi gelecek bir tarih olamaz!", "Hata", "Error");
+            }
+        }
+        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
+        {
+            // Silme işlemi için onay
+            if (args.Data.OrderStatus == "Teslim Edildi")
+            {
+                args.Cancel = true;
+                await ShowToast("Teslim edilmiş siparişler silinemez!", "Uyarı", "Warning");
+            }
+        }
+    }
+
+    private async Task OnActionComplete(ActionEventArgs<Order> args)
+    {
+        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
+        {
+            var message = args.Action == "Add" ? "Yeni sipariş eklendi!" : "Sipariş güncellendi!";
+            await ShowToast(message, "Başarılı", "Success");
+        }
+        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
+        {
+            await ShowToast("Sipariş silindi!", "Başarılı", "Success");
+        }
+    }
+
+    private async Task OnActionFailure(Syncfusion.Blazor.Grids.FailureEventArgs args)
+    {
+        await ShowToast($"İşlem başarısız: {args.Error}", "Hata", "Error");
+    }
+
+    private async Task ExcelExport()
+    {
+        if (Grid != null)
+        {
+            var excelExportProperties = new ExcelExportProperties
+            {
+                FileName = $"Siparisler_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                IncludeTemplateColumn = true,
+                IncludeHiddenColumn = false
+            };
+
+            await Grid.ExportToExcelAsync(excelExportProperties);
+        }
+    }
+
+    private async Task PdfExport()
+    {
+        if (Grid != null)
+        {
+            var pdfExportProperties = new PdfExportProperties
+            {
+                FileName = $"Siparisler_{DateTime.Now:yyyyMMdd_HHmmss}.pdf",
+                PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                PageSize = Syncfusion.Blazor.Grids.PdfPageSize.A4,
+                IncludeTemplateColumn = true
+            };
+
+            await Grid.ExportToPdfAsync(pdfExportProperties);
+        }
+    }
+
+    private async Task CsvExport()
+    {
+        if (Grid != null)
+        {
+            var csvExportProperties = new ExcelExportProperties
+            {
+                FileName = $"Siparisler_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+                IncludeTemplateColumn = false,
+                IncludeHiddenColumn = false
+            };
+
+            await Grid.ExportToCsvAsync(csvExportProperties);
+        }
+    }
+
+    private void ExcelExportComplete(object args)
+    {
+        // Excel export tamamlandığında
+        _ = ShowToast("Excel dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
+    }
+
+    private void PdfExportComplete(object args)
+    {
+        // PDF export tamamlandığında
+        _ = ShowToast("PDF dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
+    }
+
+    private async Task ShowToast(string content, string title, string cssClass)
+    {
+        if (ToastObj != null)
+        {
+            await ToastObj.ShowAsync(new ToastModel
+            {
+                Title = title,
+                Content = content,
+                CssClass = $"e-toast-{cssClass.ToLower()}",
+                Icon = cssClass switch
+                {
+                    "Success" => "e-success",
+                    "Error" => "e-error",
+                    "Warning" => "e-warning",
+                    "Information" => "e-info",
+                    _ => "e-info"
+                }
+            });
+        }
+    }
+}

@@ -1,9 +1,49 @@
 ﻿@inherits LayoutComponentBase
 
-@Body
+<div class="page">
+    <header class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+                Syncfusion DataGrid
+            </a>
+            <nav class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="/">Ana Sayfa</a>
+                <a class="nav-link text-white" href="/order-management">Sipariş Yönetimi</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow-1">
+        @Body
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0 text-muted">© 2024 Syncfusion Blazor Professional DataGrid Demo</p>
+        </div>
+    </footer>
+</div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
+    Bir hata oluştu. Lütfen sayfayı yenileyin.
+    <a href="." class="reload">Yenile</a>
     <span class="dismiss">🗙</span>
 </div>
+
+<style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    main {
+        flex: 1 0 auto;
+    }
+
+    .navbar-brand {
+        font-weight: 600;
+        font-size: 1.25rem;
+    }
+</style>
