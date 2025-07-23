@@ -25,13 +25,13 @@
             AllowSelection="true"
             ShowColumnChooser="true"
             ShowColumnMenu="true"
-            EnableVirtualization="true"
             EnablePersistence="true"
             Height="600"
             RowHeight="38"
             GridLines="GridLine.Both"
             Toolbar="@ToolbarItems"
-            ContextMenuItems="@ContextMenuItems">
+            ContextMenuItems="@ContextMenuItems"
+            ToolbarClick="ToolbarClick">
 
         <GridEditSettings AllowAdding="true"
                           AllowEditing="true"
@@ -43,7 +43,6 @@
 
         <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"
                             EnableCaseSensitivity="false"
-                            ShowFilterBarOperator="true"
                             ImmediateModeDelay="1000">
         </GridFilterSettings>
 
@@ -82,9 +81,7 @@
                     OnActionComplete="OnActionComplete"
                     OnActionFailure="OnActionFailure"
                     RowSelected="OnRowSelected"
-                    Created="OnCreated"
-                    ExcelExportComplete="ExcelExportComplete"
-                    PdfExportComplete="PdfExportComplete">
+                    Created="OnCreated">
         </GridEvents>
 
         <GridAggregates>
@@ -133,10 +130,14 @@
 
             <GridColumn Field="@nameof(Order.CustomerID)"
                         HeaderText="Müşteri"
-                        ForeignKeyField="CustomerID"
-                        ForeignKeyValue="CompanyName"
-                        DataSource="@Customers"
                         Width="200">
+                <Template>
+                    @{
+                        var order = (context as Order);
+                        var customer = Customers.FirstOrDefault(c => c.CustomerID == order.CustomerID);
+                        <span>@(customer?.CompanyName ?? "Bilinmeyen Müşteri")</span>
+                    }
+                </Template>
                 <EditTemplate>
                     @{
                         var order = (context as Order);
@@ -153,10 +154,26 @@
 
             <GridColumn Field="@nameof(Order.EmployeeID)"
                         HeaderText="Satış Temsilcisi"
-                        ForeignKeyField="EmployeeID"
-                        ForeignKeyValue="FullName"
-                        DataSource="@Employees"
                         Width="180">
+                <Template>
+                    @{
+                        var order = (context as Order);
+                        var employee = Employees.FirstOrDefault(e => e.EmployeeID == order.EmployeeID);
+                        <span>@(employee?.FullName ?? "Bilinmeyen Çalışan")</span>
+                    }
+                </Template>
+                <EditTemplate>
+                    @{
+                        var order = (context as Order);
+                        <SfDropDownList TValue="int"
+                                        TItem="Employee"
+                                        DataSource="@Employees"
+                                        @bind-Value="@order.EmployeeID"
+                                        Placeholder="Çalışan Seçin">
+                            <DropDownListFieldSettings Value="EmployeeID" Text="FullName"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    }
+                </EditTemplate>
             </GridColumn>
 
             <GridColumn Field="@nameof(Order.OrderDate)"
@@ -276,9 +293,9 @@
         color: white;
     }
 
-    .e-grid .e-toolbar .e-toolbar-item .e-tbar-btn {
-        color: white;
-    }
+        .e-grid .e-toolbar .e-toolbar-item .e-tbar-btn {
+            color: white;
+        }
 
     .e-grid .e-groupdroparea {
         background-color: #f8f9fa;
@@ -296,7 +313,7 @@
 
 @code {
     [Inject]
-    public DataService DataService { get; set; }
+    public DataService DataService { get; set; } = default!;
     private SfGrid<Order>? Grid;
     private SfToast? ToastObj;
 
@@ -354,6 +371,30 @@
     {
         // Grid oluşturulduktan sonra yapılacak işlemler
         await ShowToast("DataGrid başarıyla yüklendi!", "Bilgi", "Information");
+    }
+
+    private async Task ToolbarClick(ClickEventArgs args)
+    {
+        if (Grid == null) return;
+
+        switch (args.Item.Id)
+        {
+            case "Grid_excelexport":
+                await ExcelExport();
+                break;
+            case "Grid_pdfexport":
+                await PdfExport();
+                break;
+            case "Grid_csvexport":
+                await CsvExport();
+                break;
+            case "Grid_print":
+                await Grid.PrintAsync();
+                break;
+            case "Grid_columnchooser":
+                Grid.OpenColumnChooser(200, 50);
+                break;
+        }
     }
 
     private void OnRowSelected(RowSelectEventArgs<Order> args)
@@ -414,6 +455,7 @@
             };
 
             await Grid.ExportToExcelAsync(excelExportProperties);
+            await ShowToast("Excel dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
         }
     }
 
@@ -430,6 +472,7 @@
             };
 
             await Grid.ExportToPdfAsync(pdfExportProperties);
+            await ShowToast("PDF dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
         }
     }
 
@@ -445,19 +488,8 @@
             };
 
             await Grid.ExportToCsvAsync(csvExportProperties);
+            await ShowToast("CSV dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
         }
-    }
-
-    private void ExcelExportComplete(object args)
-    {
-        // Excel export tamamlandığında
-        _ = ShowToast("Excel dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
-    }
-
-    private void PdfExportComplete(object args)
-    {
-        // PDF export tamamlandığında
-        _ = ShowToast("PDF dosyası başarıyla oluşturuldu!", "Başarılı", "Success");
     }
 
     private async Task ShowToast(string content, string title, string cssClass)

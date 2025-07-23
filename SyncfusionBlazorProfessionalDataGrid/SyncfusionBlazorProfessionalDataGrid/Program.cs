@@ -1,11 +1,21 @@
 using SyncfusionBlazorProfessionalDataGrid.Components;
+using SyncfusionBlazorProfessionalDataGrid.Client.Services;
+using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JEaF5cXmRCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXhcc3RdQ2JeVEN/WERWYEk=");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+// Syncfusion servislerini ekleyin
+builder.Services.AddSyncfusionBlazor();
+
+// DataService'i DI container'a ekleyin
+builder.Services.AddScoped<DataService>();
 
 var app = builder.Build();
 
@@ -22,7 +32,6 @@ else
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 
